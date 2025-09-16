@@ -1,45 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pixi - Your AI Assistant</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<title>Pixi Search Frontend</title>
 </head>
-<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-6">
-
-  <h1 class="text-3xl font-bold mb-2">🌟 Pixi — Your AI Assistant</h1>
-  <div id="time" class="text-gray-400 mb-4"></div>
-
-  <!-- Response -->
-  <div id="response" class="bg-gray-800 p-4 rounded w-full max-w-2xl min-h-[120px] mb-4 overflow-auto"></div>
-
-  <!-- Controls -->
-  <div class="flex w-full max-w-2xl gap-2 mb-2">
-    <input id="userInput" type="text" placeholder="Type your message..." class="flex-1 p-2 rounded text-black"/>
-    <button id="sendBtn" class="bg-blue-500 hover:bg-blue-700 px-4 py-2 rounded">Send</button>
-    <button id="voiceBtn" class="bg-green-500 hover:bg-green-700 px-4 py-2 rounded">🎤</button>
-    <button id="cmdBtn" class="bg-purple-500 hover:bg-purple-700 px-4 py-2 rounded">Commands</button>
-  </div>
-
-  <!-- Modal: Command Sheet -->
-  <div id="cmdModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg shadow-xl w-11/12 max-w-3xl max-h-[85vh] overflow-hidden">
-      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-        <h2 class="text-xl font-semibold">📖 Pixi Command Sheet</h2>
-        <button id="closeModal" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600">Close</button>
-      </div>
-      <div class="p-4 overflow-y-auto space-y-5 text-sm leading-6">
-        <p>Ask Pixi for jokes, stories, recipes, math, open apps, play music, or code (HTML, JS, Roblox Lua).</p>
-      </div>
-    </div>
-  </div>
+<body>
+<input id="q" placeholder="Search or ask Pixi">
+<button id="googleBtn">Google</button>
+<button id="pixiBtn">Pixi</button>
+<pre id="results"></pre>
 
 <script>
-    const responseEl = document.getElementById("response");
-    const synth = window.speechSynthesis;
-    let chosenVoice = null;
+const BACKEND_URL = "http://localhost:3000/search"; // or ngrok URL
 
-    // Pick female voice
-    function pickFemaleVoice() {
-      const voices = synth.get
+async function searchGoogle(query) {
+  const res = await fetch(BACKEND_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, type: "google" })
+  });
+  const data = await res.json();
+  document.getElementById("results").textContent = JSON.stringify(data, null, 2);
+}
+
+async function askPixi(query) {
+  const res = await fetch(BACKEND_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, type: "chatgpt" })
+  });
+  const data = await res.json();
+  document.getElementById("results").textContent = JSON.stringify(data, null, 2);
+}
+
+document.getElementById("googleBtn").addEventListener("click", () => {
+  const q = document.getElementById("q").value;
+  if (!q) return;
+  searchGoogle(q);
+});
+document.getElementById("pixiBtn").addEventListener("click", () => {
+  const q = document.getElementById("q").value;
+  if (!q) return;
+  askPixi(q);
+});
+</script>
+</body>
+</html>
