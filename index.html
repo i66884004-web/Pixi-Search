@@ -2,47 +2,718 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Pixi Search Frontend</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catalyst PVP – Tier Rankings</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08090c;--surface:#0f1116;--surface2:#161820;--surface3:#1c1f28;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --text:#dde0ec;--muted:#4a4f64;--accent:#e8c84a;
+}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(232,200,74,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(232,200,74,0.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;}
+
+/* HEADER */
+header{text-align:center;padding:2.6rem 1rem 1.6rem;border-bottom:1px solid var(--border);position:relative;}
+.logo-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px;}
+.hex{width:46px;height:46px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.site-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.4rem,7vw,4.8rem);letter-spacing:0.14em;color:#fff;line-height:1;}
+.site-title em{color:var(--accent);font-style:normal;}
+.tagline{font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:0.35em;color:var(--muted);text-transform:uppercase;margin-top:6px;}
+
+/* AUTH AREA */
+.auth-area{position:absolute;top:1.2rem;right:1.2rem;display:flex;align-items:center;gap:10px;}
+.auth-btn{
+  font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:0.1em;
+  padding:6px 14px;border-radius:5px;cursor:pointer;transition:all 0.15s;border:1px solid var(--border2);
+  background:var(--surface);color:var(--muted);
+}
+.auth-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.28);}
+.auth-btn.signout{background:transparent;color:var(--muted);font-size:0.78rem;}
+.user-pill{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:20px;padding:4px 12px 4px 4px;
+}
+.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;}
+.user-name{font-size:0.82rem;color:var(--text);letter-spacing:0.03em;}
+.admin-badge{
+  font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;
+  background:var(--accent);color:#0a0b0e;padding:2px 7px;border-radius:3px;
+}
+
+/* GAMEMODE BAR */
+.gamemode-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;padding:1rem 1.5rem;border-bottom:1px solid var(--border);background:var(--surface);}
+.gm-tab{font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.12em;padding:6px 16px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.gm-tab:hover{color:var(--text);border-color:rgba(255,255,255,0.25);}
+.gm-tab.active{background:var(--accent);border-color:var(--accent);color:#0a0b0e;}
+.gm-tab-add{font-family:'Share Tech Mono',monospace;font-size:0.75rem;padding:6px 10px;opacity:0.5;}
+.gm-tab-add:hover{opacity:1;}
+
+/* CONTROLS */
+.controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:1rem 1.5rem;border-bottom:1px solid var(--border);}
+.search-wrap{position:relative;flex:1;min-width:180px;max-width:320px;}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:0.35;}
+#search{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px 8px 34px;font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:var(--text);outline:none;transition:border-color 0.2s;}
+#search:focus{border-color:var(--accent);}
+#search::placeholder{color:var(--muted);}
+.right-controls{display:flex;align-items:center;gap:10px;}
+.player-count{font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--muted);letter-spacing:0.1em;}
+.btn-add{background:var(--accent);color:#0a0b0e;border:none;padding:8px 18px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.1em;border-radius:6px;cursor:pointer;transition:opacity 0.15s,transform 0.1s;}
+.btn-add:hover{opacity:0.85;}
+.btn-add:active{transform:scale(0.97);}
+
+/* TIERS */
+.tiers{padding:1.2rem 1.2rem 3rem;display:flex;flex-direction:column;gap:10px;}
+.tier-row{display:flex;align-items:stretch;border-radius:8px;overflow:hidden;border:1px solid var(--border);transition:border-color 0.2s;}
+.tier-row:hover{border-color:rgba(255,255,255,0.12);}
+.tier-label{width:100px;min-width:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 6px;position:relative;overflow:hidden;user-select:none;}
+.tier-label-name{font-family:'Bebas Neue',sans-serif;font-size:1.45rem;letter-spacing:0.08em;line-height:1;position:relative;z-index:1;}
+.tier-label-sub{font-size:0.62rem;letter-spacing:0.2em;opacity:0.55;margin-top:3px;position:relative;z-index:1;font-family:'Share Tech Mono',monospace;}
+.tier-label::before{content:'';position:absolute;inset:0;opacity:0.15;}
+
+.tier-ultimate{background:#181400;border:1px solid rgba(232,200,74,0.28)!important;}
+.tier-ultimate .tier-label-name{color:#e8c84a;}.tier-ultimate .tier-label::before{background:#c8a020;opacity:0.22;}
+.tier-pvp1{background:#160e1e;}.tier-pvp1 .tier-label-name{color:#b87ae0;}.tier-pvp1 .tier-label::before{background:#7a3a9a;}
+.tier-pvp2{background:#1a0e0e;}.tier-pvp2 .tier-label-name{color:#e06060;}.tier-pvp2 .tier-label::before{background:#8a2a2a;}
+.tier-pvp3{background:#1a140a;}.tier-pvp3 .tier-label-name{color:#d89040;}.tier-pvp3 .tier-label::before{background:#8a5a1a;}
+.tier-pvp4{background:#0e1a12;}.tier-pvp4 .tier-label-name{color:#50c880;}.tier-pvp4 .tier-label::before{background:#266040;}
+.tier-pvp5{background:#0a1420;}.tier-pvp5 .tier-label-name{color:#50a8d8;}.tier-pvp5 .tier-label::before{background:#1a5880;}
+.tier-pvp6{background:#101018;}.tier-pvp6 .tier-label-name{color:#7880b8;}.tier-pvp6 .tier-label::before{background:#3a4068;}
+
+.tier-content{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;padding:10px 12px;min-height:60px;background:rgba(0,0,0,0.3);position:relative;}
+.tier-content.drag-over{background:rgba(232,200,74,0.05);outline:2px dashed rgba(232,200,74,0.3);outline-offset:-4px;}
+.tier-content:empty::after{content:'No players';font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:0.15em;position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:0.5;}
+
+/* PLAYER CARD */
+.player-card{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 10px 6px 7px;user-select:none;transition:border-color 0.15s,transform 0.1s;position:relative;}
+.player-card.editable{cursor:grab;}
+.player-card.editable:active{cursor:grabbing;transform:scale(0.97);}
+.player-card:hover{border-color:rgba(255,255,255,0.22);}
+.player-card.dragging{opacity:0.35;}
+.skin-face{width:34px;height:34px;flex-shrink:0;border-radius:4px;overflow:hidden;border:1.5px solid var(--border2);background:var(--surface3);position:relative;image-rendering:pixelated;}
+.skin-face img{width:100%;height:100%;object-fit:cover;display:block;image-rendering:pixelated;image-rendering:crisp-edges;}
+.skin-face .fb{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:0.85rem;color:var(--text);background:var(--surface3);}
+.player-info{line-height:1.25;min-width:0;}
+.player-name{font-weight:600;font-size:0.92rem;color:var(--text);letter-spacing:0.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;}
+.player-title{font-size:0.64rem;font-family:'Share Tech Mono',monospace;letter-spacing:0.14em;white-space:nowrap;}
+.title-gm{color:#e8c84a;}.title-m1{color:#c8a8f0;}.title-m2{color:#d89060;}
+.rank-badge{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:0.7rem;flex-shrink:0;}
+.badge-1{background:#e8c84a;color:#0a0b0e;}.badge-2{background:#b0b8d0;color:#0a0b0e;}.badge-3{background:#c87840;color:#fff;}
+.remove-btn{position:absolute;top:-5px;right:-5px;width:15px;height:15px;background:#1e0f0f;border:1px solid rgba(220,70,70,0.5);border-radius:50%;display:none;align-items:center;justify-content:center;font-size:9px;color:#d85050;cursor:pointer;z-index:10;line-height:1;}
+.player-card.editable:hover .remove-btn{display:flex;}
+.tier-ultimate .player-card{border-color:rgba(232,200,74,0.2);background:#141000;}
+.tier-ultimate .player-card:hover{border-color:rgba(232,200,74,0.5);}
+
+/* SAVING INDICATOR */
+.save-indicator{
+  position:fixed;bottom:1.2rem;right:1.2rem;
+  font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:0.12em;
+  background:var(--surface);border:1px solid var(--border2);
+  padding:6px 14px;border-radius:5px;color:var(--muted);
+  opacity:0;transition:opacity 0.3s;z-index:200;
+}
+.save-indicator.show{opacity:1;}
+
+/* READ-ONLY BANNER */
+.readonly-banner{
+  text-align:center;padding:7px;
+  background:rgba(232,200,74,0.06);
+  border-bottom:1px solid rgba(232,200,74,0.15);
+  font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:0.18em;
+  color:rgba(232,200,74,0.6);
+}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:1.8rem;width:360px;max-width:92vw;}
+.modal h2{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:0.1em;margin-bottom:1.2rem;color:#fff;}
+.field{margin-bottom:0.9rem;}
+.field label{display:block;font-size:0.7rem;letter-spacing:0.22em;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-bottom:4px;text-transform:uppercase;}
+.field input,.field select{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;font-family:'Rajdhani',sans-serif;font-size:1rem;color:var(--text);outline:none;transition:border-color 0.2s;-webkit-appearance:none;}
+.field input:focus,.field select:focus{border-color:var(--accent);}
+.field select option{background:#121420;color:var(--text);}
+.skin-preview-row{display:none;align-items:center;gap:10px;margin-top:6px;}
+.skin-preview-row.show{display:flex;}
+#skinPreviewImg{width:40px;height:40px;image-rendering:pixelated;border-radius:4px;border:1px solid var(--border2);background:var(--surface3);}
+#skinPreviewLabel{font-size:0.8rem;color:var(--muted);}
+.modal-actions{display:flex;gap:10px;margin-top:1.3rem;}
+.btn-confirm{flex:1;background:var(--accent);color:#0a0b0e;border:none;padding:10px;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:0.1em;border-radius:6px;cursor:pointer;transition:opacity 0.15s;}
+.btn-confirm:hover{opacity:0.85;}
+.btn-cancel{background:transparent;color:var(--muted);border:1px solid var(--border2);padding:10px 16px;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:0.1em;border-radius:6px;cursor:pointer;transition:border-color 0.15s,color 0.15s;}
+.btn-cancel:hover{border-color:rgba(255,255,255,0.25);color:var(--text);}
+
+/* GM MODAL */
+#gmModal .modal{width:320px;}
+.gm-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;margin-bottom:1rem;}
+.gm-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;}
+.gm-item-name{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.08em;}
+.gm-del{background:transparent;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:0 4px;transition:color 0.15s;}
+.gm-del:hover{color:#d85050;}
+.gm-add-row{display:flex;gap:8px;}
+.gm-add-row input{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;font-family:'Rajdhani',sans-serif;font-size:1rem;color:var(--text);outline:none;}
+.gm-add-row input:focus{border-color:var(--accent);}
+.gm-add-btn{background:var(--accent);color:#0a0b0e;border:none;padding:8px 14px;font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.08em;border-radius:6px;cursor:pointer;}
+
+/* LOGIN MODAL */
+#loginModal .modal{width:300px;text-align:center;}
+#loginModal .modal h2{margin-bottom:0.6rem;}
+.login-sub{font-size:0.82rem;color:var(--muted);margin-bottom:1.4rem;line-height:1.5;}
+.google-btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;background:#fff;color:#1a1a1a;border:none;
+  padding:10px 16px;border-radius:6px;cursor:pointer;
+  font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:600;
+  transition:opacity 0.15s;
+}
+.google-btn:hover{opacity:0.9;}
+.google-btn svg{flex-shrink:0;}
+.login-note{font-size:0.72rem;color:var(--muted);margin-top:1rem;font-family:'Share Tech Mono',monospace;letter-spacing:0.1em;}
+.btn-guest{background:transparent;color:var(--muted);border:1px solid var(--border2);width:100%;padding:8px;font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.1em;border-radius:6px;cursor:pointer;margin-top:8px;transition:color 0.15s,border-color 0.15s;}
+.btn-guest:hover{color:var(--text);border-color:rgba(255,255,255,0.25);}
+
+footer{text-align:center;padding:1.8rem 1rem;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:0.15em;}
+
+@media(max-width:580px){
+  .tier-label{width:70px;min-width:70px;}.tier-label-name{font-size:1rem;}
+  .auth-area{position:static;justify-content:center;margin-top:10px;}
+}
+</style>
 </head>
 <body>
-<input id="q" placeholder="Search or ask Pixi">
-<button id="googleBtn">Google</button>
-<button id="pixiBtn">Pixi</button>
-<pre id="results"></pre>
+<div class="wrap">
+
+<header>
+  <div class="logo-row">
+    <div class="hex">⚡</div>
+    <div class="site-title"><em>Catalyst</em> PVP</div>
+  </div>
+  <div class="tagline">Community Tier Rankings · Season I</div>
+  <div class="auth-area" id="authArea">
+    <button class="auth-btn" id="loginBtn">Sign In</button>
+  </div>
+</header>
+
+<div id="readonlyBanner" class="readonly-banner" style="display:none">
+  👁 VIEW ONLY — Sign in as admin to make changes
+</div>
+
+<div class="gamemode-bar" id="gmBar"></div>
+
+<div class="controls">
+  <div class="search-wrap">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+      <circle cx="6.5" cy="6.5" r="5" stroke="white" stroke-width="1.5"/>
+      <line x1="10.5" y1="10.5" x2="15" y2="15" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <input type="text" id="search" placeholder="Search players…">
+  </div>
+  <div class="right-controls">
+    <span class="player-count" id="playerCount">0 players</span>
+    <button class="btn-add" id="openModal" style="display:none">+ Add Player</button>
+  </div>
+</div>
+
+<div class="tiers" id="tiersContainer"></div>
+<footer>Catalyst PVP · Skins via mc-heads.net · Season I</footer>
+</div>
+
+<!-- SAVE INDICATOR -->
+<div class="save-indicator" id="saveIndicator">Saving…</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <h2>Sign In</h2>
+    <p class="login-sub">Admin access required to add or edit players and gamemodes.</p>
+    <button class="google-btn" id="googleSignInBtn">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <p class="login-note">Only Admins have edit access</p>
+    <button class="btn-guest" id="guestBtn">Continue as Viewer</button>
+  </div>
+</div>
+
+<!-- ADD PLAYER MODAL -->
+<div class="modal-overlay" id="playerModal">
+  <div class="modal">
+    <h2>Add Player</h2>
+    <div class="field">
+      <label>Minecraft Username</label>
+      <input type="text" id="inputName" placeholder="e.g. Dream" maxlength="16" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="skin-preview-row" id="skinPreviewRow">
+      <img id="skinPreviewImg" src="" alt="skin">
+      <span id="skinPreviewLabel">Skin loaded</span>
+    </div>
+    <div class="field" style="margin-top:0.9rem">
+      <label>Tier</label>
+      <select id="inputTier"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="closePlayerModal">Cancel</button>
+      <button class="btn-confirm" id="confirmAdd">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAMEMODE MANAGER MODAL -->
+<div class="modal-overlay" id="gmModal">
+  <div class="modal">
+    <h2>Manage Gamemodes</h2>
+    <div class="gm-list" id="gmList"></div>
+    <div class="gm-add-row">
+      <input type="text" id="gmInput" placeholder="New gamemode name…" maxlength="20">
+      <button class="gm-add-btn" id="gmAddBtn">Add</button>
+    </div>
+    <div class="modal-actions" style="margin-top:1rem">
+      <button class="btn-cancel" id="closeGmModal">Done</button>
+    </div>
+  </div>
+</div>
 
 <script>
-const BACKEND_URL = "   https://63ed68c49bbb.ngrok-free.app"; // or ngrok URL
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const ADMIN_EMAIL = 'i66884004@gmail.com';
+const GOOGLE_CLIENT_ID = ''; // optional: fill with your Google OAuth client ID for full auth
+const STORAGE_KEY = 'catalystpvp_data';
+const TIERS = [
+  {id:'ultimate',label:'ULTIMATE',sub:'TOP TIER'},
+  {id:'pvp1',label:'PVP 1',sub:'ELITE'},
+  {id:'pvp2',label:'PVP 2',sub:'ADVANCED'},
+  {id:'pvp3',label:'PVP 3',sub:'SKILLED'},
+  {id:'pvp4',label:'PVP 4',sub:'AVERAGE'},
+  {id:'pvp5',label:'PVP 5',sub:'BEGINNER'},
+  {id:'pvp6',label:'PVP 6',sub:'ENTRY'},
+];
+const DEFAULT_GMS = ['SMP','Mace','Sword','NethOP','UHC','Axe','Vanilla','Pot'];
 
-async function searchGoogle(query) {
-  const res = await fetch(BACKEND_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, type: "google" })
-  });
-  const data = await res.json();
-  document.getElementById("results").textContent = JSON.stringify(data, null, 2);
+// ── STATE ──────────────────────────────────────────────────────────────────
+let isAdmin = false;
+let currentUser = null; // {email, name, picture}
+let currentGM = null;
+let dragSrc = null;
+let gamemodes = [...DEFAULT_GMS];
+let allData = {}; // {[gm]: [{id,name,tier},...]}
+let saveTimer = null;
+
+// ── STORAGE (shared via window.storage) ───────────────────────────────────
+async function loadFromStorage() {
+  try {
+    const result = await window.storage.get(STORAGE_KEY, true);
+    if (result && result.value) {
+      const parsed = JSON.parse(result.value);
+      if (parsed.gamemodes) gamemodes = parsed.gamemodes;
+      if (parsed.data) allData = parsed.data;
+    }
+  } catch(e) {
+    // storage not available or key doesn't exist — use empty state
+  }
+  // ensure each gamemode has an array
+  gamemodes.forEach(gm => { if (!allData[gm]) allData[gm] = []; });
+  if (!currentGM || !gamemodes.includes(currentGM)) currentGM = gamemodes[0];
 }
 
-async function askPixi(query) {
-  const res = await fetch(BACKEND_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, type: "chatgpt" })
-  });
-  const data = await res.json();
-  document.getElementById("results").textContent = JSON.stringify(data, null, 2);
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  showSaving('Saving…');
+  saveTimer = setTimeout(async () => {
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify({gamemodes, data: allData}), true);
+      showSaving('Saved ✓');
+      setTimeout(() => hideSaving(), 1200);
+    } catch(e) {
+      showSaving('Save failed');
+      setTimeout(() => hideSaving(), 2000);
+    }
+  }, 600);
 }
 
-document.getElementById("googleBtn").addEventListener("click", () => {
-  const q = document.getElementById("q").value;
-  if (!q) return;
-  searchGoogle(q);
+function showSaving(msg) {
+  const el = document.getElementById('saveIndicator');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideSaving() {
+  document.getElementById('saveIndicator').classList.remove('show');
+}
+
+// ── AUTH ───────────────────────────────────────────────────────────────────
+function handleCredentialResponse(response) {
+  try {
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    setUser({email: payload.email, name: payload.name, picture: payload.picture});
+  } catch(e) {
+    alert('Sign-in failed. Please try again.');
+  }
+}
+
+function setUser(user) {
+  currentUser = user;
+  isAdmin = user.email === ADMIN_EMAIL;
+  localStorage.setItem('cpvp_user', JSON.stringify(user));
+  updateAuthUI();
+  renderAll();
+  document.getElementById('loginModal').classList.remove('open');
+}
+
+function signOut() {
+  currentUser = null;
+  isAdmin = false;
+  localStorage.removeItem('cpvp_user');
+  updateAuthUI();
+  renderAll();
+}
+
+function updateAuthUI() {
+  const area = document.getElementById('authArea');
+  const banner = document.getElementById('readonlyBanner');
+  const addBtn = document.getElementById('openModal');
+
+  if (currentUser) {
+    area.innerHTML = `
+      <div class="user-pill">
+        ${currentUser.picture ? `<img class="user-avatar" src="${currentUser.picture}" alt="">` : ''}
+        <span class="user-name">${currentUser.name || currentUser.email.split('@')[0]}</span>
+        ${isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}
+      </div>
+      <button class="auth-btn signout" id="signOutBtn">Sign out</button>
+    `;
+    document.getElementById('signOutBtn').onclick = signOut;
+    banner.style.display = 'none';
+    addBtn.style.display = isAdmin ? 'block' : 'none';
+  } else {
+    area.innerHTML = `<button class="auth-btn" id="loginBtn">Sign In</button>`;
+    document.getElementById('loginBtn').onclick = () => document.getElementById('loginModal').classList.add('open');
+    banner.style.display = 'block';
+    addBtn.style.display = 'none';
+  }
+}
+
+// ── GAMEMODES BAR ──────────────────────────────────────────────────────────
+function renderGmBar() {
+  const bar = document.getElementById('gmBar');
+  bar.innerHTML = '';
+  gamemodes.forEach(gm => {
+    const btn = document.createElement('button');
+    btn.className = 'gm-tab' + (gm === currentGM ? ' active' : '');
+    btn.dataset.gm = gm;
+    btn.textContent = gm;
+    btn.onclick = () => { currentGM = gm; renderGmBar(); renderTiers(); };
+    bar.appendChild(btn);
+  });
+  if (isAdmin) {
+    const mgr = document.createElement('button');
+    mgr.className = 'gm-tab gm-tab-add';
+    mgr.textContent = '+ Manage';
+    mgr.onclick = openGmModal;
+    bar.appendChild(mgr);
+  }
+}
+
+function openGmModal() {
+  renderGmList();
+  document.getElementById('gmModal').classList.add('open');
+}
+
+function renderGmList() {
+  const list = document.getElementById('gmList');
+  list.innerHTML = '';
+  gamemodes.forEach(gm => {
+    const item = document.createElement('div');
+    item.className = 'gm-item';
+    item.innerHTML = `<span class="gm-item-name">${gm}</span>`;
+    const del = document.createElement('button');
+    del.className = 'gm-del';
+    del.textContent = '×';
+    del.title = 'Remove gamemode';
+    del.onclick = () => {
+      if (gamemodes.length <= 1) return;
+      gamemodes = gamemodes.filter(x => x !== gm);
+      if (currentGM === gm) currentGM = gamemodes[0];
+      scheduleSave();
+      renderGmList();
+      renderGmBar();
+      renderTiers();
+    };
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
+document.getElementById('gmAddBtn').onclick = () => {
+  const val = document.getElementById('gmInput').value.trim();
+  if (!val || gamemodes.includes(val)) return;
+  gamemodes.push(val);
+  if (!allData[val]) allData[val] = [];
+  document.getElementById('gmInput').value = '';
+  scheduleSave();
+  renderGmList();
+  renderGmBar();
+};
+
+document.getElementById('gmInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('gmAddBtn').click();
 });
-document.getElementById("pixiBtn").addEventListener("click", () => {
-  const q = document.getElementById("q").value;
-  if (!q) return;
-  askPixi(q);
+
+document.getElementById('closeGmModal').onclick = () => document.getElementById('gmModal').classList.remove('open');
+document.getElementById('gmModal').onclick = e => { if (e.target === document.getElementById('gmModal')) document.getElementById('gmModal').classList.remove('open'); };
+
+// ── TIER SELECT OPTIONS ────────────────────────────────────────────────────
+function buildTierSelect() {
+  const sel = document.getElementById('inputTier');
+  sel.innerHTML = '';
+  TIERS.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.label;
+    sel.appendChild(opt);
+  });
+  sel.value = 'pvp6';
+}
+
+// ── PLAYER CARDS ───────────────────────────────────────────────────────────
+const faceUrl = name => `https://mc-heads.net/avatar/${encodeURIComponent(name)}/32`;
+
+function titleFor(rank) {
+  if (rank === 1) return {text:'GRANDMASTER', cls:'title-gm', icon:'✦'};
+  if (rank === 2) return {text:'MASTER',      cls:'title-m1', icon:'✧'};
+  if (rank === 3) return {text:'MASTER',      cls:'title-m2', icon:'✧'};
+  return null;
+}
+
+function buildCard(player, rank) {
+  const t = titleFor(rank);
+  const card = document.createElement('div');
+  card.className = 'player-card' + (isAdmin ? ' editable' : '');
+  card.dataset.pid = player.id;
+  if (isAdmin) card.draggable = true;
+
+  const face = document.createElement('div');
+  face.className = 'skin-face';
+  const img = document.createElement('img');
+  img.src = faceUrl(player.name);
+  img.alt = player.name;
+  img.loading = 'lazy';
+  const fb = document.createElement('div');
+  fb.className = 'fb';
+  fb.textContent = player.name.slice(0,2).toUpperCase();
+  img.onerror = function(){ this.style.display='none'; fb.style.display='flex'; };
+  face.appendChild(img); face.appendChild(fb);
+
+  const info = document.createElement('div');
+  info.className = 'player-info';
+  const nm = document.createElement('div');
+  nm.className = 'player-name'; nm.textContent = player.name;
+  info.appendChild(nm);
+  if (t) {
+    const tEl = document.createElement('div');
+    tEl.className = `player-title ${t.cls}`;
+    tEl.textContent = `${t.icon} ${t.text}`;
+    info.appendChild(tEl);
+  }
+
+  card.appendChild(face);
+  card.appendChild(info);
+
+  if (rank >= 1 && rank <= 3) {
+    const badge = document.createElement('div');
+    badge.className = `rank-badge badge-${rank}`;
+    badge.textContent = rank;
+    card.appendChild(badge);
+  }
+
+  if (isAdmin) {
+    const rm = document.createElement('div');
+    rm.className = 'remove-btn'; rm.textContent = '×';
+    rm.onclick = e => {
+      e.stopPropagation();
+      allData[currentGM] = (allData[currentGM] || []).filter(p => p.id !== player.id);
+      scheduleSave(); renderTiers();
+    };
+    card.appendChild(rm);
+
+    card.addEventListener('dragstart', e => {
+      dragSrc = player.id; card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => { card.classList.remove('dragging'); dragSrc = null; });
+  }
+
+  return card;
+}
+
+// ── TIERS ──────────────────────────────────────────────────────────────────
+function renderTiers() {
+  const container = document.getElementById('tiersContainer');
+  const q = document.getElementById('search').value.toLowerCase();
+  container.innerHTML = '';
+  const all = allData[currentGM] || [];
+
+  TIERS.forEach(tier => {
+    const row = document.createElement('div');
+    row.className = `tier-row tier-${tier.id}`;
+
+    const lbl = document.createElement('div');
+    lbl.className = 'tier-label';
+    lbl.innerHTML = `<div class="tier-label-name">${tier.label}</div><div class="tier-label-sub">${tier.sub}</div>`;
+
+    const cont = document.createElement('div');
+    cont.className = 'tier-content';
+    cont.dataset.tier = tier.id;
+
+    all.filter(p => p.tier === tier.id && (!q || p.name.toLowerCase().includes(q)))
+       .forEach(p => cont.appendChild(buildCard(p, all.findIndex(x => x.id === p.id) + 1)));
+
+    if (isAdmin) {
+      cont.addEventListener('dragover', e => { e.preventDefault(); cont.classList.add('drag-over'); });
+      cont.addEventListener('dragleave', () => cont.classList.remove('drag-over'));
+      cont.addEventListener('drop', e => {
+        e.preventDefault(); cont.classList.remove('drag-over');
+        if (!dragSrc) return;
+        let list = allData[currentGM] || [];
+        const p = list.find(x => x.id === dragSrc); if (!p) return;
+        p.tier = tier.id;
+        list = list.filter(x => x.id !== dragSrc);
+        let pos = list.length;
+        for (let i = list.length - 1; i >= 0; i--) { if (list[i].tier === tier.id) { pos = i + 1; break; } }
+        list.splice(pos, 0, p);
+        allData[currentGM] = list;
+        scheduleSave(); renderTiers();
+      });
+    }
+
+    row.appendChild(lbl); row.appendChild(cont); container.appendChild(row);
+  });
+
+  const n = all.length;
+  document.getElementById('playerCount').textContent = n + ' player' + (n !== 1 ? 's' : '');
+}
+
+function renderAll() { renderGmBar(); renderTiers(); }
+
+// ── ADD PLAYER MODAL ───────────────────────────────────────────────────────
+const playerModal = document.getElementById('playerModal');
+document.getElementById('openModal').onclick = () => { buildTierSelect(); playerModal.classList.add('open'); document.getElementById('inputName').focus(); };
+document.getElementById('closePlayerModal').onclick = () => playerModal.classList.remove('open');
+playerModal.onclick = e => { if (e.target === playerModal) playerModal.classList.remove('open'); };
+
+let pTimer = null;
+document.getElementById('inputName').addEventListener('input', () => {
+  clearTimeout(pTimer);
+  const name = document.getElementById('inputName').value.trim();
+  const row = document.getElementById('skinPreviewRow');
+  if (name.length < 2) { row.classList.remove('show'); return; }
+  pTimer = setTimeout(() => {
+    const pImg = document.getElementById('skinPreviewImg');
+    const pLbl = document.getElementById('skinPreviewLabel');
+    pImg.src = `https://mc-heads.net/avatar/${encodeURIComponent(name)}/40`;
+    pImg.onload = () => { pLbl.textContent = name + "'s skin"; row.classList.add('show'); };
+    pImg.onerror = () => row.classList.remove('show');
+  }, 500);
 });
+
+document.getElementById('confirmAdd').onclick = () => {
+  const name = document.getElementById('inputName').value.trim();
+  const tier = document.getElementById('inputTier').value;
+  if (!name) return;
+  if (!allData[currentGM]) allData[currentGM] = [];
+  allData[currentGM].push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2), name, tier });
+  scheduleSave(); renderTiers();
+  playerModal.classList.remove('open');
+  document.getElementById('inputName').value = '';
+  document.getElementById('skinPreviewRow').classList.remove('show');
+};
+
+document.getElementById('inputName').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('confirmAdd').click(); });
+
+// ── LOGIN MODAL ────────────────────────────────────────────────────────────
+document.getElementById('loginBtn').onclick = () => document.getElementById('loginModal').classList.add('open');
+document.getElementById('loginModal').onclick = e => { if (e.target === document.getElementById('loginModal')) document.getElementById('loginModal').classList.remove('open'); };
+
+document.getElementById('googleSignInBtn').onclick = () => {
+  // Use Google Identity Services popup flow
+  if (window.google && window.google.accounts) {
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID',
+      callback: handleCredentialResponse,
+      ux_mode: 'popup',
+    });
+    window.google.accounts.id.prompt(notification => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // Fallback: manual email entry for demo
+        showEmailFallback();
+      }
+    });
+  } else {
+    showEmailFallback();
+  }
+};
+
+function showEmailFallback() {
+  const modal = document.querySelector('#loginModal .modal');
+  modal.innerHTML = `
+    <h2>Sign In</h2>
+    <p class="login-sub">Enter your email to sign in.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="emailInput" placeholder="your@email.com" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;font-family:'Rajdhani',sans-serif;font-size:1rem;color:var(--text);outline:none;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cancelEmailLogin">Cancel</button>
+      <button class="btn-confirm" id="confirmEmailLogin">Sign In</button>
+    </div>
+    <p class="login-note">Admin: i66884004@gmail.com</p>
+  `;
+  document.getElementById('cancelEmailLogin').onclick = () => document.getElementById('loginModal').classList.remove('open');
+  document.getElementById('confirmEmailLogin').onclick = () => {
+    const email = document.getElementById('emailInput').value.trim().toLowerCase();
+    if (!email) return;
+    const name = email.split('@')[0];
+    setUser({email, name, picture: null});
+  };
+  document.getElementById('emailInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('confirmEmailLogin').click(); });
+  document.getElementById('emailInput').focus();
+}
+
+document.getElementById('guestBtn').onclick = () => {
+  document.getElementById('loginModal').classList.remove('open');
+};
+
+// ── SEARCH ─────────────────────────────────────────────────────────────────
+document.getElementById('search').addEventListener('input', renderTiers);
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+async function init() {
+  // Restore session
+  try {
+    const saved = localStorage.getItem('cpvp_user');
+    if (saved) {
+      const u = JSON.parse(saved);
+      currentUser = u;
+      isAdmin = u.email === ADMIN_EMAIL;
+    }
+  } catch(e) {}
+
+  await loadFromStorage();
+  updateAuthUI();
+  renderAll();
+
+  // Show login prompt to guests after a moment
+  if (!currentUser) {
+    setTimeout(() => {
+      document.getElementById('loginModal').classList.add('open');
+    }, 800);
+  }
+}
+
+init();
 </script>
 </body>
 </html>
